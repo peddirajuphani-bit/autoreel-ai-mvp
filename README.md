@@ -45,6 +45,24 @@ The included OAuth callback is a safe foundation, but Meta app review, redirect 
 pytest -q
 ```
 
+## AI provider
+The defaults to a deterministic Mock provider so the MVP runs without paid AI credentials. To generate content with Google Gemini, set in `.env`:
+
+```
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-key
+GEMINI_MODEL=gemini-2.0-flash
+```
+
+Get a key at https://aistudio.google.com/apikey. With no key or `AI_PROVIDER=mock`, the safe mock provider is used. All provider responses are validated and normalized (scene durations rescaled to the reel length, quality score clamped to 0-100) before rendering. To add other providers (OpenAI, Azure OpenAI, Anthropic), implement `ContentProvider` in `app/providers.py` and register it in `get_provider()` in `app/main.py`.
+
 ## Important
-The content generator is a Mock provider so the MVP runs without paid AI credentials. Replace `MockContentProvider` behind the provider interface with OpenAI, Azure OpenAI, Anthropic, or Gemini. The renderer creates motion-card scenes rather than using copyrighted media.
+The renderer creates motion-card scenes rather than using copyrighted media.
+
+## Test
+```bash
+pytest -q
+```
+
+## Production Instagram setup
 

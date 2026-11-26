@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     meta_app_id: str = ""
     meta_app_secret: str = ""
     meta_redirect_uri: str = "http://localhost:8000/api/instagram/callback"
+    ai_provider: str = "mock"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 settings = Settings()
 

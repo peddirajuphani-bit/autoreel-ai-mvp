@@ -10,7 +10,7 @@ from .config import settings
 from .db import Base, engine, get_db
 from .models import User, BrandProfile, Reel, Scene, Publication, InstagramAccount
 from .auth import hash_password, verify_password, token_for, current_user
-from .providers import MockContentProvider
+from .providers import MockContentProvider, GeminiContentProvider
 from .state import move
 from .render import render
 
@@ -55,11 +55,18 @@ def save_brand(brand_name:str=Form(),primary_genre:str=Form(),target_audience:st
         if k in {"brand_name","primary_genre","target_audience","country","language","tone","objective","preferred_duration","topics_include","topics_exclude"}: setattr(p,k,v)
     db.add(p);db.commit();db.refresh(p);return profile_dict(p)
 
+def get_provider():
+    if settings.ai_provider=="gemini" and settings.gemini_api_key:
+        return GeminiContentProvider(settings.gemini_api_key,settings.gemini_model)
+    return MockContentProvider()
+
 @app.post("/api/reels/generate")
 def generate(u=Depends(current_user),db:Session=Depends(get_db)):
     p=db.scalar(select(BrandProfile).where(BrandProfile.user_id==u.id))
     if not p: raise HTTPException(400,"Create brand profile first")
-    data=MockContentProvider().generate(p)
+    try: data=get_provider().generate(p)
+    except ValueError as e: raise HTTPException(502,str(e))
+    except Exception: raise HTTPException(502,"AI provider request failed")
     r=Reel(user_id=u.id,duration=p.preferred_duration,**{k:data[k] for k in ["topic","hook","title","script","caption","hashtags","cover_text","cta","quality_score"]})
     db.add(r);db.flush()
     move(r,"SCRIPT_GENERATED")
