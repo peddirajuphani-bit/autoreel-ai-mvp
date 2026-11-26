@@ -117,3 +117,42 @@ class GeminiContentProvider(ContentProvider):
         except json.JSONDecodeError:
             raise ValueError("Gemini returned non-JSON content")
         return normalize_plan(data, p.preferred_duration)
+
+class OpenAICompatibleContentProvider(ContentProvider):
+    def __init__(self, base_url, model, api_key="", json_mode=True):
+        import httpx
+        self.base_url, self.model = base_url.rstrip("/"), model
+        self.api_key, self.json_mode = api_key, json_mode
+        self.httpx = httpx
+
+    def generate(self, p):
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "You are an assistant that outputs only valid JSON."},
+                {"role": "user", "content": build_prompt(p)},
+            ],
+            "temperature": 0.8,
+        }
+        if self.json_mode:
+            payload["response_format"] = {"type": "json_object"}
+        with self.httpx.Client(timeout=180) as c:
+            r = c.post(f"{self.base_url}/chat/completions", headers=headers, json=payload)
+        if r.status_code in (401, 403):
+            raise ValueError("Your AI rejected the credentials (check CUSTOM_AI_API_KEY)")
+        if r.status_code == 429:
+            raise ValueError("Your AI is rate limited; retry shortly")
+        if r.status_code >= 400:
+            raise ValueError(f"AI endpoint error {r.status_code} (check CUSTOM_AI_BASE_URL and CUSTOM_AI_MODEL)")
+        try:
+            text = r.json()["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError):
+            raise ValueError("AI endpoint returned an unexpected response shape")
+        try:
+            data = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            raise ValueError("AI returned non-JSON content (try CUSTOM_AI_JSON_MODE=false if your server handles JSON prompting only)")
+        return normalize_plan(data, p.preferred_duration)

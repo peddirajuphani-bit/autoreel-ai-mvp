@@ -46,7 +46,23 @@ pytest -q
 ```
 
 ## AI provider
-The defaults to a deterministic Mock provider so the MVP runs without paid AI credentials. To generate content with Google Gemini, set in `.env`:
+Defaults to a deterministic Mock provider so the MVP runs without paid AI credentials.
+
+### Your own AI (OpenAI-compatible endpoint)
+Point the app at any OpenAI-compatible server (Ollama, vLLM, LM Studio, TGI, LiteLLM, or your own service) by setting in `.env`:
+
+```
+AI_PROVIDER=custom
+CUSTOM_AI_BASE_URL=http://localhost:11434/v1   # base URL incl. /v1
+CUSTOM_AI_MODEL=llama3.1
+CUSTOM_AI_API_KEY=                              # leave empty if your server needs no auth
+CUSTOM_AI_JSON_MODE=true                        # set false if your server rejects response_format
+```
+
+Important: if the app runs in Docker, `localhost` refers to the container itself. Use `host.docker.internal` (Docker Desktop), the host LAN IP, or run your AI in the same Docker network.
+
+### Google Gemini
+Set in `.env` (get a key at https://aistudio.google.com/apikey):
 
 ```
 AI_PROVIDER=gemini
@@ -54,7 +70,7 @@ GEMINI_API_KEY=your-key
 GEMINI_MODEL=gemini-2.0-flash
 ```
 
-Get a key at https://aistudio.google.com/apikey. With no key or `AI_PROVIDER=mock`, the safe mock provider is used. All provider responses are validated and normalized (scene durations rescaled to the reel length, quality score clamped to 0-100) before rendering. To add other providers (OpenAI, Azure OpenAI, Anthropic), implement `ContentProvider` in `app/providers.py` and register it in `get_provider()` in `app/main.py`.
+With no key or `AI_PROVIDER=mock`, the safe mock provider is used. All provider responses are validated and normalized (scene durations rescaled to the reel length, quality score clamped to 0-100) before rendering. To add other providers (OpenAI, Azure OpenAI, Anthropic), implement `ContentProvider` in `app/providers.py` and register it in `get_provider()` in `app/main.py`.
 
 ## Important
 The renderer creates motion-card scenes rather than using copyrighted media.

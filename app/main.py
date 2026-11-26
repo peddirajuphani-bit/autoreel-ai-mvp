@@ -10,7 +10,7 @@ from .config import settings
 from .db import Base, engine, get_db
 from .models import User, BrandProfile, Reel, Scene, Publication, InstagramAccount
 from .auth import hash_password, verify_password, token_for, current_user
-from .providers import MockContentProvider, GeminiContentProvider
+from .providers import MockContentProvider, GeminiContentProvider, OpenAICompatibleContentProvider
 from .state import move
 from .render import render
 
@@ -56,6 +56,8 @@ def save_brand(brand_name:str=Form(),primary_genre:str=Form(),target_audience:st
     db.add(p);db.commit();db.refresh(p);return profile_dict(p)
 
 def get_provider():
+    if settings.ai_provider=="custom" and settings.custom_ai_base_url:
+        return OpenAICompatibleContentProvider(settings.custom_ai_base_url,settings.custom_ai_model,settings.custom_ai_api_key,settings.custom_ai_json_mode)
     if settings.ai_provider=="gemini" and settings.gemini_api_key:
         return GeminiContentProvider(settings.gemini_api_key,settings.gemini_model)
     return MockContentProvider()
